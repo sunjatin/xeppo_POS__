@@ -99,7 +99,8 @@
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="form-label small text-muted">Tanggal</label>
-                        <input type="date" name="reservation_date" class="form-control rounded-3" required>
+                        <input type="date" name="reservation_date" id="date-input" class="form-control rounded-3" required>
+                        <small id="date-status" class="text-danger mt-1 d-none">Tanggal ini sudah penuh!</small>
                     </div>
                     <div class="col-6 mb-3">
                         <label class="form-label small text-muted">Jam Datang</label>
@@ -110,6 +111,15 @@
                     <label class="form-label small text-muted">Jumlah Tamu</label>
                     <input type="number" name="number_of_guests" class="form-control rounded-3" placeholder="2 Orang" min="1" required>
                 </div>
+                <div class="mb-3">
+                <label class="form-label small text-muted">Pilih Area</label>
+                <select name="area_id" id="area-select" class="form-select rounded-3" required>
+                    <option value="" disabled selected>-- Pilih Area --</option>
+                    @foreach($areas as $area)
+                        <option value="{{ $area->id }}">{{ $area->name }}</option>
+                    @endforeach
+                </select>
+                </div>
             </div>
 
             <!-- Pilih Menu dengan Quantity -->
@@ -117,26 +127,34 @@
                 <h6 class="fw-bold mb-3">Pilih Pesanan</h6>
                 <div id="menu-list">
                     @foreach($menus as $menu)
-                    <div class="menu-item-card">
-                        <img src="{{ $menu->image ? asset('storage/'.$menu->image) : 'https://via.placeholder.com/50' }}" alt="{{ $menu->name }}">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold small">{{ $menu->name }}</div>
-                            <div class="text-danger small">Rp {{ number_format($menu->price, 0, ',', '.') }}</div>
+                        <!-- TAMBAHKAN BLOK PHP INI -->
+                        @php
+                            // Cek apakah ada data keranjang dari session untuk menu ini
+                            // Jika ada ambil qty-nya, jika tidak default 0
+                            $currentQty = $cart[$menu->id] ?? 0;
+                        @endphp
+
+                        <div class="menu-item-card">
+                            <img src="{{ $menu->image ? asset('storage/'.$menu->image) : 'https://via.placeholder.com/50' }}" alt="{{ $menu->name }}">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold small">{{ $menu->name }}</div>
+                                <div class="text-danger small">Rp {{ number_format($menu->price, 0, ',', '.') }}</div>
+                            </div>
+                            
+                            <!-- Kontrol Quantity -->
+                            <div class="qty-control">
+                                <button type="button" onclick="updateQty({{ $menu->id }}, -1)">-</button>
+                                <!-- Sekarang $currentQty sudah terdefinisi -->
+                                <input type="text" id="qty-{{ $menu->id }}" value="{{ $currentQty }}" readonly>
+                                <button type="button" onclick="updateQty({{ $menu->id }}, 1)">+</button>
+                            </div>
+                            
+                            <!-- Hidden input untuk dikirim ke server -->
+                            <input type="hidden" name="menus[{{ $menu->id }}][id]" value="{{ $menu->id }}">
+                            <input type="hidden" name="menus[{{ $menu->id }}][qty]" id="input-qty-{{ $menu->id }}" value="{{ $currentQty }}">
+                            <input type="hidden" name="menus[{{ $menu->id }}][price]" value="{{ $menu->price }}">
+                            <input type="hidden" name="menus[{{ $menu->id }}][name]" value="{{ $menu->name }}">
                         </div>
-                        
-                        <!-- Kontrol Quantity -->
-                        <div class="qty-control">
-                            <button type="button" onclick="updateQty({{ $menu->id }}, -1)">-</button>
-                            <input type="text" id="qty-{{ $menu->id }}" value="0" readonly>
-                            <button type="button" onclick="updateQty({{ $menu->id }}, 1)">+</button>
-                        </div>
-                        
-                        <!-- Hidden input untuk dikirim ke server -->
-                        <input type="hidden" name="menus[{{ $menu->id }}][id]" value="{{ $menu->id }}">
-                        <input type="hidden" name="menus[{{ $menu->id }}][qty]" id="input-qty-{{ $menu->id }}" value="0">
-                        <input type="hidden" name="menus[{{ $menu->id }}][price]" value="{{ $menu->price }}">
-                        <input type="hidden" name="menus[{{ $menu->id }}][name]" value="{{ $menu->name }}">
-                    </div>
                     @endforeach
                 </div>
                 
@@ -198,5 +216,53 @@
         }
         document.getElementById('total-display').innerText = 'Rp ' + total.toLocaleString('id-ID');
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        calculateTotal();
+    });
+
 </script>
+
+<script>
+    // ... script lama ...
+
+    const checkUrl = "{{ route('availability.check') }}";
+    const dateInput = document.getElementById('date-input');
+    const areaSelect = document.getElementById('area-select');
+    const dateStatus = document.getElementById('date-status');
+
+    function checkDate() {
+        const date = dateInput.value;
+        const areaId = areaSelect.value;
+
+        if (date && areaId) {
+            fetch(checkUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ date: date, area_id: areaId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.available) {
+                    // Jika Penuh
+                    alert(data.message); // Tampilkan popup
+                    dateInput.value = ""; // Kosongkan input
+                    dateStatus.classList.remove('d-none');
+                    dateStatus.innerText = data.message;
+                } else {
+                    dateStatus.classList.add('d-none');
+                }
+            });
+        }
+    }
+
+    // Pasang event listener
+    dateInput.addEventListener('change', checkDate);
+    areaSelect.addEventListener('change', checkDate); // Cek ulang jika ganti area
+
+</script>
+
 @endsection

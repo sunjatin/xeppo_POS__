@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Kitchen;
 
 class MenuController extends Controller
 {
@@ -17,16 +18,21 @@ class MenuController extends Controller
 
     public function create()
     {
-        return view('admin.menus.create');
+        $kitchens = Kitchen::all(); // Ambil data dapur
+        return view('admin.menus.create', compact('kitchens'));
+        // return view('admin.menus.create');
     }
 
     public function store(Request $request)
     {
+
+
         $request->validate([
             'name' => 'required',
             'price' => 'required|numeric',
             'description' => 'nullable',
-            'image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048'
+            'image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
+            'kitchen_id' => 'nullable|exists:kitchens,id'
         ]);
 
         $data = $request->all();
@@ -41,7 +47,9 @@ class MenuController extends Controller
 
     public function edit(Menu $menu)
     {
-        return view('admin.menus.edit', compact('menu'));
+        $kitchens = Kitchen::all(); // Ambil data dapur
+        return view('admin.menus.edit', compact('menu', 'kitchens'));
+        // return view('admin.menus.edit', compact('menu'));
     }
 
     public function update(Request $request, Menu $menu)
@@ -49,6 +57,7 @@ class MenuController extends Controller
         $request->validate([
             'name' => 'required',
             'price' => 'required|numeric',
+            'kitchen_id' => 'nullable|exists:kitchens,id',
             'image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048'
         ]);
 

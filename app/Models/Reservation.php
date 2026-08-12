@@ -20,10 +20,19 @@ class Reservation extends Model
         'payment_method',
         'status',
         'notes',
-        'total_price'
+        'total_price',
+        'dp_amount',
+        'area_id'
     ];
 
     protected $casts = [
         'menus' => 'array',
     ];
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class);
+    }
+
 }
+

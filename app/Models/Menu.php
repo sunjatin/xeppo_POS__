@@ -13,6 +13,13 @@ class Menu extends Model
         'name',
         'price',
         'image',
-        'is_active'
+        'is_active',
+        'kitchen_id'
     ];
+
+    public function kitchen()
+    {
+        return $this->belongsTo(Kitchen::class);
+    }
+
 }

@@ -14,6 +14,17 @@
                         <input type="text" name="name" class="form-control" required>
                     </div>
                     
+                    <!-- TAMBAHKAN INI -->
+                    <div class="mb-3">
+                        <label>Dapur Pengelola</label>
+                        <select name="kitchen_id" class="form-select">
+                            <option value="">-- Pilih Dapur --</option>
+                            @foreach($kitchens as $kitchen)
+                                <option value="{{ $kitchen->id }}">{{ $kitchen->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="mb-3">
                         <label>Harga</label>
                         <input type="number" name="price" class="form-control" required>

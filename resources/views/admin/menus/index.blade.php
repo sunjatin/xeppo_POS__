@@ -16,6 +16,7 @@
                     <th width="50">No</th>
                     <th>Gambar</th>
                     <th>Nama Menu</th>
+                    <th>Dapur</th>
                     <th>Harga</th>
                     <th>Status</th>
                     <th width="150">Aksi</th>
@@ -33,6 +34,15 @@
                         @endif
                     </td>
                     <td>{{ $menu->name }}</td>
+                    <!-- TAMBAHAN DAPUR -->
+                    <td>
+                        @if($menu->kitchen)
+                            <span class="badge bg-info">{{ $menu->kitchen->name }}</span>
+                        @else
+                            <span class="badge bg-secondary">Belum Ditentukan</span>
+                        @endif
+                    </td>
+                    <!-- AKHIR TAMBAHAN -->
                     <td>Rp {{ number_format($menu->price, 0, ',', '.') }}</td>
                     <td>
                         @if($menu->is_active)

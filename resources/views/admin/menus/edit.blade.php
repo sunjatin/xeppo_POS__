@@ -14,6 +14,21 @@
                         <label>Nama Menu</label>
                         <input type="text" name="name" class="form-control" value="{{ $menu->name }}" required>
                     </div>
+
+                    <!-- Dropdown Dapur -->
+                    <div class="mb-3">
+                        <label>Dapur Pengelola</label>
+                        <select name="kitchen_id" class="form-select">
+                            <option value="">-- Tidak Ada Dapur --</option>
+                            @foreach($kitchens as $kitchen)
+                                <option value="{{ $kitchen->id }}" {{ $menu->kitchen_id == $kitchen->id ? 'selected' : '' }}>
+                                    {{ $kitchen->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Pilih dapur yang akan mengerjakan menu ini (untuk cetak struk koki).</small>
+                    </div>
+                    <!-- SELESAI -->
                     
                     <div class="mb-3">
                         <label>Harga</label>

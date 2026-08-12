@@ -57,7 +57,7 @@
     <div id="receipt-area" class="receipt-container shadow-sm mb-4">
         <!-- Header Struk -->
         <div class="text-center">
-            <h4 class="fw-bolder" style="color: var(--xepo-red);">RESTO</h4>
+            <h4 class="fw-bolder" style="color: var(--xepo-red);">XEPPO RESTO</h4>
             <small>Restoran & Cafe</small><br>
             <small>Jl. Contoh Alamat No. 123</small>
         </div>
@@ -70,16 +70,20 @@
                 <td style="text-align: right;">{{ $reservation->customer_name }}</td>
             </tr>
             <tr>
-                <td>Tanggal</td>
+                <td>Tanggal Booking</td>
                 <td style="text-align: right;">{{ \Carbon\Carbon::parse($reservation->reservation_date)->format('d/m/Y') }}</td>
             </tr>
             <tr>
-                <td>Jam</td>
+                <td>Jam Datang</td>
                 <td style="text-align: right;">{{ $reservation->reservation_time }}</td>
             </tr>
             <tr>
-                <td>Tamu</td>
+                <td>Jumlah Tamu</td>
                 <td style="text-align: right;">{{ $reservation->number_of_guests }} Orang</td>
+            </tr>
+            <tr>
+            <td>Area</td>
+                <td style="text-align: right;">{{ $reservation->area->name ?? '-' }}</td>
             </tr>
         </table>
         <div class="separator"></div>
@@ -99,16 +103,32 @@
         <div class="separator"></div>
 
         <!-- Total -->
+        <!-- Di bagian tabel total -->
+        <div class="separator"></div>
         <table width="100%">
             <tr>
-                <td><strong>TOTAL</strong></td>
-                <td style="text-align: right;"><strong>Rp {{ number_format($reservation->total_price, 0, ',', '.') }}</strong></td>
+                <td>Total Harga</td>
+                <td style="text-align: right;">Rp {{ number_format($reservation->total_price, 0, ',', '.') }}</td>
+            </tr>
+            <tr style="font-weight: bold; color: #d9534f;">
+                <td>WAJIB BAYAR DP DULU (20%)</td>
+                <td style="text-align: right;">Rp {{ number_format($reservation->dp_amount, 0, ',', '.') }}</td>
+            </tr>
+            <tr style="font-size: 10px; color: #555;">
+                <td>Sisa Pelunasan dilunasi saat Check In</td>
+                <td style="text-align: right;">Rp {{ number_format($reservation->total_price - $reservation->dp_amount, 0, ',', '.') }}</td>
             </tr>
         </table>
+        
         <div class="separator"></div>
+        <div class="separator"></div>
+        <tr></tr>
         
         <div class="text-center">
             <small>Terima kasih telah memesan!</small>
+            <br>
+            <br>
+            <small>SCREENSHOT/SIMPAN STRUK INI SEBAGAI BUKTI</small>
         </div>
     </div>
 
@@ -132,13 +152,16 @@
 
         <div class="d-grid gap-2 mt-4">
             <!-- Tombol Konfirmasi (WA) -->
-            <a href="https://wa.me/6281312016351?text=Halo%20XEPPO,%20saya%20sudah%20booking%20atas%20nama%20{{ urlencode($reservation->customer_name) }}%20dengan%20total%20Rp%20{{ number_format($reservation->total_price, 0, ',', '.') }}.%20Mohon%20dikonfirmasi." 
-               target="_blank"
-               id="btn-confirm-wa"
-               class="btn btn-success py-2 rounded-pill fw-bold"
-               onclick="enableFinishButton()">
+            <button type="button" 
+                    id="btn-confirm-wa"
+                    class="btn btn-success py-2 rounded-pill fw-bold w-100"
+                    data-url="{{ route('reservation.confirm', $reservation->id) }}"
+                    data-phone="6281312016351"
+                    data-name="{{ $reservation->customer_name }}"
+                    data-dp="{{ number_format($reservation->dp_amount, 0, ',', '.') }}"
+                    onclick="handleWhatsAppClick(this)">
                 <i class="fab fa-whatsapp me-2"></i>Konfirmasi via WhatsApp
-            </a>
+            </button>
 
             <!-- Tombol Selesai (Disabled awalnya) -->
             <button id="btn-finish" class="btn btn-secondary py-2 rounded-pill fw-bold" disabled onclick="downloadAndFinish()">
@@ -168,5 +191,63 @@
             window.location.href = "{{ route('home') }}";
         }, 500);
     }
+
+// BUAT UPDATE STATUS PEMBAYAEAN via WA otomatis
+    function handleWhatsAppClick(button) {
+        var url = button.getAttribute('data-url');
+        var phone = button.getAttribute('data-phone');
+        var name = button.getAttribute('data-name');
+        var dp = button.getAttribute('data-dp');
+        var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        // 1. Kirim request ke server untuk update status jadi "Confirmed"
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // 2. Jika sukses, baru buka WhatsApp
+                // Format pesan sesuai keinginan Anda
+                var text = `Halo XEPPO, saya sudah booking atas nama ${name} dengan DP sebesar Rp ${dp}. Mohon dikonfirmasi.`;
+                
+                // Encode teks agar URL valid
+                var waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+                
+                window.open(waUrl, '_blank');
+
+                // 3. Aktifkan tombol Selesai
+                enableFinishButton();
+            } else {
+                alert('Terjadi kesalahan saat konfirmasi. Coba lagi.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Tidak dapat terhubung ke server.');
+        });
+    }
+
+    function enableFinishButton() {
+        setTimeout(() => {
+            var finishBtn = document.getElementById('btn-finish');
+            finishBtn.disabled = false;
+            finishBtn.classList.remove('btn-secondary');
+            finishBtn.classList.add('btn-danger');
+        }, 1000);
+    }
+
+    function downloadAndFinish() {
+        window.print();
+        setTimeout(() => {
+            window.location.href = "{{ route('home') }}";
+        }, 500);
+    }
+
 </script>
 @endsection
